@@ -11,7 +11,7 @@ const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! Welcome to HUG-N-TRY AI Assistant. I'm here to help you with any questions you might have. How can I assist you today?",
+      text: "Hello! Welcome to HUG-N-TRY AI Assistant. How can I assist you today?",
       isUser: false,
       timestamp: new Date(),
     },

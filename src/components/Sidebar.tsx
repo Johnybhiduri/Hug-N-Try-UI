@@ -1,17 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  HiHome, 
-  HiChat, 
-  HiCog, 
-  HiUser, 
-  HiPlus,
+  HiKey, 
+  HiCheckCircle, 
+  HiXCircle,
+  HiChevronDown,
   HiChevronLeft,
   HiChevronRight
 } from 'react-icons/hi';
-import { 
-  RiRobot2Line,
-  RiHistoryLine
-} from 'react-icons/ri';
+import { RiRobot2Line } from 'react-icons/ri';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,19 +16,73 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
-  const menuItems = [
-    { icon: <HiHome className="text-xl" />, label: 'Home' },
-    { icon: <RiHistoryLine className="text-xl" />, label: 'History' },
-    { icon: <HiUser className="text-xl" />, label: 'Profile' },
-    { icon: <HiCog className="text-xl" />, label: 'Settings' },
+  const [apiKey, setApiKey] = useState('');
+  const [isApiVerified, setIsApiVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [selectedTask, setSelectedTask] = useState('text-generation');
+  const [selectedModel, setSelectedModel] = useState('gpt2');
+  const [showTaskDropdown, setShowTaskDropdown] = useState(false);
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+
+  const taskTypes = [
+    { id: 'text-generation', name: 'Text Generation' },
+    { id: 'image-generation', name: 'Image Generation' },
+    { id: 'video-generation', name: 'Video Generation' },
+    { id: 'text-to-speech', name: 'Text to Speech' },
+    { id: 'speech-to-text', name: 'Speech to Text' },
   ];
 
-  const chatHistory = [
-    { id: 1, title: 'Welcome Chat', icon: <RiRobot2Line /> },
-    { id: 2, title: 'Project Discussion', icon: <HiChat /> },
-    { id: 3, title: 'Technical Support', icon: <HiCog /> },
-    { id: 4, title: 'General Inquiry', icon: <HiUser /> },
-  ];
+  const modelOptions = {
+    'text-generation': [
+      { id: 'gpt2', name: 'GPT-2' },
+      { id: 'bloom', name: 'BLOOM' },
+      { id: 'llama', name: 'LLaMA' },
+      { id: 'mistral', name: 'Mistral' },
+    ],
+    'image-generation': [
+      { id: 'stable-diffusion', name: 'Stable Diffusion' },
+      { id: 'dalle', name: 'DALL-E' },
+      { id: 'midjourney', name: 'Midjourney' },
+    ],
+    'video-generation': [
+      { id: 'modelscope', name: 'ModelScope' },
+      { id: 'runway', name: 'Runway ML' },
+    ],
+    'text-to-speech': [
+      { id: 'coqui', name: 'Coqui TTS' },
+      { id: 'tacotron', name: 'Tacotron 2' },
+    ],
+    'speech-to-text': [
+      { id: 'whisper', name: 'Whisper' },
+      { id: 'wav2vec', name: 'Wav2Vec 2.0' },
+    ],
+  };
+
+  const verifyApiKey = async () => {
+    if (!apiKey.trim()) return;
+
+    setIsVerifying(true);
+    
+    // Simulate API verification
+    setTimeout(() => {
+      // In real implementation, you would make an actual API call to verify the key
+      const isValid = apiKey.length >= 10; // Simple validation for demo
+      setIsApiVerified(isValid);
+      setIsVerifying(false);
+    }, 1500);
+  };
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setApiKey(e.target.value);
+    // Reset verification status if API key changes
+    if (isApiVerified) {
+      setIsApiVerified(false);
+    }
+  };
+
+  const getCurrentModels = () => {
+    return modelOptions[selectedTask as keyof typeof modelOptions] || [];
+  };
 
   return (
     <div className="h-full bg-gray-900 border-r border-gray-700 flex flex-col">
@@ -75,80 +125,210 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
         </div>
       </div>
 
-      {/* New Chat Button */}
-      <div className="p-4 border-b border-gray-700">
-        {isOpen ? (
-          <button className="w-full flex items-center justify-center space-x-2 p-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium border border-blue-500">
-            <HiPlus className="text-lg" />
-            <span>New Chat</span>
-          </button>
-        ) : (
-          <button className="w-full flex items-center justify-center p-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
-            <HiPlus className="text-lg" />
-          </button>
-        )}
-      </div>
-
-      {/* Chat History */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {isOpen && (
-          <div className="mb-4">
-            {/* <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Recent Chats
-            </h3> */}
-            <div className="space-y-1">
-              {chatHistory.map((chat) => (
-                <div
-                  key={chat.id}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-800 cursor-pointer transition-colors group"
-                >
-                  <div className="text-gray-400 group-hover:text-gray-300">
-                    {chat.icon}
-                  </div>
-                  <span className="text-sm text-gray-300 truncate flex-1">
-                    {chat.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Menu Items - Always show icons, show labels only when expanded */}
-        <div className="space-y-1">
-          {menuItems.map((item, index) => (
-            <button
-              key={index}
-              className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-800 transition-colors group"
-            >
-              <div className="text-gray-400 group-hover:text-gray-300">
-                {item.icon}
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* API Key Section */}
+        <div className="space-y-3">
+          {isOpen && (
+            <label className="block text-sm font-medium text-gray-300">
+              Hugging Face API Key
+            </label>
+          )}
+          
+          <div className="space-y-2">
+            <div className="flex space-x-2">
+              <input
+                type="password"
+                value={apiKey}
+                onChange={handleApiKeyChange}
+                placeholder={isOpen ? "Enter your API key" : "API Key"}
+                className={`flex-1 px-3 py-2 bg-gray-800 border rounded-lg text-sm text-white placeholder-gray-400 ${
+                  isApiVerified 
+                    ? 'border-green-500' 
+                    : apiKey 
+                    ? 'border-yellow-500' 
+                    : 'border-gray-600'
+                } ${!isOpen ? 'text-center' : ''}`}
+              />
               {isOpen && (
-                <span className="text-sm text-gray-300">{item.label}</span>
+                <button
+                  onClick={verifyApiKey}
+                  disabled={!apiKey.trim() || isVerifying}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    !apiKey.trim() || isVerifying
+                      ? 'bg-gray-600 cursor-not-allowed text-gray-400'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {isVerifying ? '...' : 'Verify'}
+                </button>
+              )}
+            </div>
+            
+            {/* Verification Status */}
+            {isOpen && (
+              <div className="flex items-center space-x-2 text-sm">
+                {isVerifying ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-blue-400">Verifying...</span>
+                  </>
+                ) : isApiVerified ? (
+                  <>
+                    <HiCheckCircle className="text-green-500 text-lg" />
+                    <span className="text-green-400">API Key Verified</span>
+                  </>
+                ) : apiKey ? (
+                  <>
+                    <HiXCircle className="text-yellow-500 text-lg" />
+                    <span className="text-yellow-400">Not Verified</span>
+                  </>
+                ) : (
+                  <>
+                    <HiKey className="text-gray-500 text-lg" />
+                    <span className="text-gray-400">API Key Required</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Task Type Dropdown */}
+        <div className="space-y-3">
+          {isOpen && (
+            <label className="block text-sm font-medium text-gray-300">
+              Task Type
+            </label>
+          )}
+          
+          <div className="relative">
+            <button
+              onClick={() => setShowTaskDropdown(!showTaskDropdown)}
+              disabled={!isApiVerified}
+              className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
+                !isApiVerified 
+                  ? 'cursor-not-allowed opacity-50' 
+                  : 'hover:bg-gray-700'
+              } ${!isOpen ? 'justify-center' : ''}`}
+            >
+              {isOpen ? (
+                <>
+                  <span>
+                    {taskTypes.find(task => task.id === selectedTask)?.name || 'Select Task'}
+                  </span>
+                  <HiChevronDown className={`text-gray-400 transition-transform ${
+                    showTaskDropdown ? 'rotate-180' : ''
+                  }`} />
+                </>
+              ) : (
+                <RiRobot2Line className="text-gray-300" />
               )}
             </button>
-          ))}
+
+            {showTaskDropdown && isOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                {taskTypes.map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => {
+                      setSelectedTask(task.id);
+                      setSelectedModel(modelOptions[task.id as keyof typeof modelOptions]?.[0]?.id || '');
+                      setShowTaskDropdown(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
+                      selectedTask === task.id ? 'bg-blue-600 hover:bg-blue-700' : ''
+                    }`}
+                  >
+                    {task.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Model Selection Dropdown */}
+        <div className="space-y-3">
+          {isOpen && (
+            <label className="block text-sm font-medium text-gray-300">
+              Model
+            </label>
+          )}
+          
+          <div className="relative">
+            <button
+              onClick={() => setShowModelDropdown(!showModelDropdown)}
+              disabled={!isApiVerified}
+              className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
+                !isApiVerified 
+                  ? 'cursor-not-allowed opacity-50' 
+                  : 'hover:bg-gray-700'
+              } ${!isOpen ? 'justify-center' : ''}`}
+            >
+              {isOpen ? (
+                <>
+                  <span>
+                    {getCurrentModels().find(model => model.id === selectedModel)?.name || 'Select Model'}
+                  </span>
+                  <HiChevronDown className={`text-gray-400 transition-transform ${
+                    showModelDropdown ? 'rotate-180' : ''}`} 
+                  />
+                </>
+              ) : (
+                <HiKey className="text-gray-300" />
+              )}
+            </button>
+
+            {showModelDropdown && isOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {getCurrentModels().map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      setShowModelDropdown(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
+                      selectedModel === model.id ? 'bg-blue-600 hover:bg-blue-700' : ''
+                    }`}
+                  >
+                    {model.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Status Message */}
+        {isOpen && (
+          <div className="p-3 bg-gray-800 rounded-lg border border-gray-700">
+            <p className="text-sm text-gray-300 text-center">
+              {isApiVerified 
+                ? 'Ready to generate! Select your task and model.' 
+                : 'Please verify your API key to enable model selection.'
+              }
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* User Profile */}
+      {/* Footer */}
       <div className="p-4 border-t border-gray-700">
         {isOpen ? (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-white">U</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">User</p>
-              <p className="text-xs text-gray-400">Free Plan</p>
-            </div>
+          <div className="text-center">
+            <p className="text-xs text-gray-400">
+              {isApiVerified ? '✅ API Verified' : '🔒 API Required'}
+            </p>
           </div>
         ) : (
           <div className="flex justify-center">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium text-white">U</span>
-            </div>
+            {isApiVerified ? (
+              <HiCheckCircle className="text-green-500 text-lg" />
+            ) : (
+              <HiKey className="text-gray-500 text-lg" />
+            )}
           </div>
         )}
       </div>
