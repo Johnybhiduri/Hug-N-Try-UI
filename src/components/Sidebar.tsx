@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  HiKey, 
-  HiCheckCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  HiKey,
+  HiCheckCircle,
   HiXCircle,
   HiChevronDown,
   HiChevronLeft,
-  HiChevronRight
-} from 'react-icons/hi';
-import { RiRobot2Line } from 'react-icons/ri';
+  HiChevronRight,
+} from "react-icons/hi";
+import { RiRobot2Line } from "react-icons/ri";
+import { MdInput } from "react-icons/md";
+import { FaRegSquareCheck } from "react-icons/fa6";
+import { HfInference } from "@huggingface/inference";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -15,61 +18,168 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+interface Model {
+  id: string;
+  name: string;
+  pipeline_tag?: string;
+}
+
+interface PipelineModels {
+  [pipelineTag: string]: Model[];
+}
+
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [isApiVerified, setIsApiVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [selectedTask, setSelectedTask] = useState('text-generation');
-  const [selectedModel, setSelectedModel] = useState('gpt2');
+  const [selectedTask, setSelectedTask] = useState("text-generation");
+  const [selectedModel, setSelectedModel] = useState("");
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [pipelineModels, setPipelineModels] = useState<PipelineModels>({});
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
 
+  // Task types that correspond to Hugging Face pipeline tags
   const taskTypes = [
-    { id: 'text-generation', name: 'Text Generation' },
-    { id: 'image-generation', name: 'Image Generation' },
-    { id: 'video-generation', name: 'Video Generation' },
-    { id: 'text-to-speech', name: 'Text to Speech' },
-    { id: 'speech-to-text', name: 'Speech to Text' },
+    { id: "text-generation", name: "Text Generation" },
+    { id: "text2text-generation", name: "Text to Text Generation" },
+    { id: "text-classification", name: "Text Classification" },
+    { id: "question-answering", name: "Question Answering" },
+    { id: "summarization", name: "Summarization" },
+    { id: "translation", name: "Translation" },
+    { id: "conversational", name: "Conversational AI" },
+    { id: "image-classification", name: "Image Classification" },
+    { id: "image-to-text", name: "Image to Text" },
+    { id: "text-to-image", name: "Text to Image" },
+    { id: "audio-classification", name: "Audio Classification" },
+    { id: "automatic-speech-recognition", name: "Speech Recognition" },
+    { id: "text-to-speech", name: "Text to Speech" },
   ];
 
-  const modelOptions = {
-    'text-generation': [
-      { id: 'gpt2', name: 'GPT-2' },
-      { id: 'bloom', name: 'BLOOM' },
-      { id: 'llama', name: 'LLaMA' },
-      { id: 'mistral', name: 'Mistral' },
-    ],
-    'image-generation': [
-      { id: 'stable-diffusion', name: 'Stable Diffusion' },
-      { id: 'dalle', name: 'DALL-E' },
-      { id: 'midjourney', name: 'Midjourney' },
-    ],
-    'video-generation': [
-      { id: 'modelscope', name: 'ModelScope' },
-      { id: 'runway', name: 'Runway ML' },
-    ],
-    'text-to-speech': [
-      { id: 'coqui', name: 'Coqui TTS' },
-      { id: 'tacotron', name: 'Tacotron 2' },
-    ],
-    'speech-to-text': [
-      { id: 'whisper', name: 'Whisper' },
-      { id: 'wav2vec', name: 'Wav2Vec 2.0' },
-    ],
+  // Fetch models from Hugging Face API
+  const fetchHuggingFaceModels = async (token: string) => {
+    setIsLoadingModels(true);
+    try {
+      const response = await fetch(
+        "https://huggingface.co/api/models?inference=warm&limit=2000",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const models = await response.json();
+      
+      // Organize models by pipeline tag
+      const organizedModels: PipelineModels = {};
+      
+      models.forEach((model: any) => {
+        if (model.pipeline_tag) {
+          const pipelineTag = model.pipeline_tag;
+          if (!organizedModels[pipelineTag]) {
+            organizedModels[pipelineTag] = [];
+          }
+          organizedModels[pipelineTag].push({
+            id: model.id,
+            name: model.modelId || model.id,
+            pipeline_tag: model.pipeline_tag,
+          });
+        }
+      });
+
+      setPipelineModels(organizedModels);
+      
+      // Set default model for the selected task if available
+      if (organizedModels[selectedTask] && organizedModels[selectedTask].length > 0) {
+        setSelectedModel(organizedModels[selectedTask][0].id);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error fetching Hugging Face models:", error);
+      return false;
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
+
+  // Verify API key by making a simple request
+  const verifyApiKeyWithRequest = async (token: string) => {
+    try {
+      // Try to fetch user info or a simple endpoint
+      const response = await fetch("https://huggingface.co/api/whoami-v2", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const userInfo = await response.json();
+      console.log("API Key verified for user:", userInfo);
+      return true;
+    } catch (error) {
+      console.error("API verification failed:", error);
+      return false;
+    }
+  };
+
+  // Alternative: Verify by testing with a simple model list request
+  const verifyApiKeyWithModelTest = async (token: string) => {
+    try {
+      const response = await fetch("https://huggingface.co/api/models?limit=1", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      await response.json();
+      return true;
+    } catch (error) {
+      console.error("API verification failed:", error);
+      return false;
+    }
   };
 
   const verifyApiKey = async () => {
     if (!apiKey.trim()) return;
 
     setIsVerifying(true);
-    
-    // Simulate API verification
-    setTimeout(() => {
-      // In real implementation, you would make an actual API call to verify the key
-      const isValid = apiKey.length >= 10; // Simple validation for demo
-      setIsApiVerified(isValid);
+
+    try {
+      // Verify API key using direct HTTP request
+      const isVerified = await verifyApiKeyWithRequest(apiKey);
+      
+      if (isVerified) {
+        // Now fetch the available models
+        const modelsFetched = await fetchHuggingFaceModels(apiKey);
+        
+        if (modelsFetched) {
+          setIsApiVerified(true);
+        } else {
+          setIsApiVerified(false);
+          console.error("Failed to fetch models");
+        }
+      } else {
+        setIsApiVerified(false);
+      }
+    } catch (error) {
+      console.error("API verification failed:", error);
+      setIsApiVerified(false);
+    } finally {
       setIsVerifying(false);
-    }, 1500);
+    }
   };
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,12 +187,32 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
     // Reset verification status if API key changes
     if (isApiVerified) {
       setIsApiVerified(false);
+      setPipelineModels({});
     }
   };
 
   const getCurrentModels = () => {
-    return modelOptions[selectedTask as keyof typeof modelOptions] || [];
+    return pipelineModels[selectedTask] || [];
   };
+
+  // Initialize with some default models if API is not verified
+  const getDefaultModels = () => {
+    const defaultModels: PipelineModels = {
+      "text-generation": [
+        { id: "gpt2", name: "GPT-2" },
+        { id: "facebook/opt-350m", name: "OPT-350M" },
+      ],
+      "text-classification": [
+        { id: "distilbert-base-uncased-finetuned-sst-2-english", name: "DistilBERT SST-2" },
+      ],
+      "question-answering": [
+        { id: "distilbert-base-cased-distilled-squad", name: "DistilBERT SQuAD" },
+      ],
+    };
+    return defaultModels;
+  };
+
+  const availableModels = isApiVerified ? pipelineModels : getDefaultModels();
 
   return (
     <div className="h-full bg-gray-900 border-r border-gray-700 flex flex-col">
@@ -134,49 +264,68 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
               Hugging Face API Key
             </label>
           )}
-          
+
           <div className="space-y-2">
-            <div className="flex space-x-2">
-              <input
-                type="password"
-                value={apiKey}
-                onChange={handleApiKeyChange}
-                placeholder={isOpen ? "Enter your API key" : "API Key"}
-                className={`flex-1 px-3 py-2 bg-gray-800 border rounded-lg text-sm text-white placeholder-gray-400 ${
-                  isApiVerified 
-                    ? 'border-green-500' 
-                    : apiKey 
-                    ? 'border-yellow-500' 
-                    : 'border-gray-600'
-                } ${!isOpen ? 'text-center' : ''}`}
-              />
-              {isOpen && (
+            {isOpen ? (
+              <div className="flex space-x-2">
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                  placeholder="Enter your Hugging Face API key"
+                  className={`flex-1 px-3 py-2 bg-gray-800 border rounded-lg text-sm text-white placeholder-gray-400 ${
+                    isApiVerified
+                      ? "border-green-500"
+                      : apiKey
+                      ? "border-yellow-500"
+                      : "border-gray-600"
+                  }`}
+                />
                 <button
                   onClick={verifyApiKey}
                   disabled={!apiKey.trim() || isVerifying}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     !apiKey.trim() || isVerifying
-                      ? 'bg-gray-600 cursor-not-allowed text-gray-400'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      ? "bg-gray-600 cursor-not-allowed text-gray-400"
+                      : isApiVerified
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-blue-600 hover:bg-blue-700 text-white"
                   }`}
                 >
-                  {isVerifying ? '...' : 'Verify'}
+                  {isVerifying ? (
+                    <span className="animate-pulse">...</span>
+                  ) : isApiVerified ? (
+                    <FaRegSquareCheck className="w-4 h-4" />
+                  ) : (
+                    <FaRegSquareCheck className="w-4 h-4" />
+                  )}
                 </button>
-              )}
-            </div>
-            
+              </div>
+            ) : (
+              // Show unclickable icon when sidebar is closed
+              <div className="flex justify-center">
+                <div className="p-3 bg-gray-800 border border-gray-600 rounded-lg cursor-not-allowed">
+                  <MdInput className="text-gray-500 text-xl" />
+                </div>
+              </div>
+            )}
+
             {/* Verification Status */}
             {isOpen && (
               <div className="flex items-center space-x-2 text-sm">
                 {isVerifying ? (
                   <>
                     <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-blue-400">Verifying...</span>
+                    <span className="text-blue-400">
+                      {isLoadingModels ? "Fetching models..." : "Verifying..."}
+                    </span>
                   </>
                 ) : isApiVerified ? (
                   <>
                     <HiCheckCircle className="text-green-500 text-lg" />
-                    <span className="text-green-400">API Key Verified</span>
+                    <span className="text-green-400">
+                      API Verified
+                    </span>
                   </>
                 ) : apiKey ? (
                   <>
@@ -201,46 +350,67 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
               Task Type
             </label>
           )}
-          
+
           <div className="relative">
-            <button
-              onClick={() => setShowTaskDropdown(!showTaskDropdown)}
-              disabled={!isApiVerified}
-              className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
-                !isApiVerified 
-                  ? 'cursor-not-allowed opacity-50' 
-                  : 'hover:bg-gray-700'
-              } ${!isOpen ? 'justify-center' : ''}`}
-            >
-              {isOpen ? (
-                <>
-                  <span>
-                    {taskTypes.find(task => task.id === selectedTask)?.name || 'Select Task'}
-                  </span>
-                  <HiChevronDown className={`text-gray-400 transition-transform ${
-                    showTaskDropdown ? 'rotate-180' : ''
-                  }`} />
-                </>
-              ) : (
-                <RiRobot2Line className="text-gray-300" />
-              )}
-            </button>
+            {isOpen ? (
+              <button
+                onClick={() => setShowTaskDropdown(!showTaskDropdown)}
+                disabled={!isApiVerified && Object.keys(availableModels).length === 0}
+                className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
+                  !isApiVerified && Object.keys(availableModels).length === 0
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-gray-700"
+                }`}
+              >
+                <span>
+                  {taskTypes.find((task) => task.id === selectedTask)?.name ||
+                    "Select Task"}
+                </span>
+                <HiChevronDown
+                  className={`text-gray-400 transition-transform ${
+                    showTaskDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            ) : (
+              // Show unclickable icon when sidebar is closed
+              <div className="flex justify-center">
+                <div
+                  className={`p-3 bg-gray-800 border border-gray-600 rounded-lg cursor-not-allowed ${
+                    !isApiVerified ? "opacity-50" : ""
+                  }`}
+                >
+                  <RiRobot2Line className="text-gray-300 text-xl" />
+                </div>
+              </div>
+            )}
 
             {showTaskDropdown && isOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
-                {taskTypes.map((task) => (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {taskTypes
+                  .filter(task => availableModels[task.id] && availableModels[task.id].length > 0)
+                  .map((task) => (
                   <button
                     key={task.id}
                     onClick={() => {
                       setSelectedTask(task.id);
-                      setSelectedModel(modelOptions[task.id as keyof typeof modelOptions]?.[0]?.id || '');
+                      if (availableModels[task.id] && availableModels[task.id].length > 0) {
+                        setSelectedModel(availableModels[task.id][0].id);
+                      }
                       setShowTaskDropdown(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
-                      selectedTask === task.id ? 'bg-blue-600 hover:bg-blue-700' : ''
+                      selectedTask === task.id
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : ""
                     }`}
                   >
-                    {task.name}
+                    <div className="flex justify-between items-center">
+                      <span>{task.name}</span>
+                      <span className="text-xs text-gray-400">
+                        ({availableModels[task.id]?.length || 0})
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -255,30 +425,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
               Model
             </label>
           )}
-          
+
           <div className="relative">
-            <button
-              onClick={() => setShowModelDropdown(!showModelDropdown)}
-              disabled={!isApiVerified}
-              className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
-                !isApiVerified 
-                  ? 'cursor-not-allowed opacity-50' 
-                  : 'hover:bg-gray-700'
-              } ${!isOpen ? 'justify-center' : ''}`}
-            >
-              {isOpen ? (
-                <>
-                  <span>
-                    {getCurrentModels().find(model => model.id === selectedModel)?.name || 'Select Model'}
-                  </span>
-                  <HiChevronDown className={`text-gray-400 transition-transform ${
-                    showModelDropdown ? 'rotate-180' : ''}`} 
-                  />
-                </>
-              ) : (
-                <HiKey className="text-gray-300" />
-              )}
-            </button>
+            {isOpen ? (
+              <button
+                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                disabled={!getCurrentModels() || getCurrentModels().length === 0}
+                className={`w-full flex items-center justify-between px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white transition-colors ${
+                  !getCurrentModels() || getCurrentModels().length === 0
+                    ? "cursor-not-allowed opacity-50"
+                    : "hover:bg-gray-700"
+                }`}
+              >
+                <span className="truncate">
+                  {getCurrentModels().find(
+                    (model) => model.id === selectedModel
+                  )?.name || "Select Model"}
+                </span>
+                <HiChevronDown
+                  className={`text-gray-400 transition-transform ${
+                    showModelDropdown ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            ) : (
+              // Show unclickable icon when sidebar is closed
+              <div className="flex justify-center">
+                <div
+                  className={`p-3 bg-gray-800 border border-gray-600 rounded-lg cursor-not-allowed ${
+                    !isApiVerified ? "opacity-50" : ""
+                  }`}
+                >
+                  <HiKey className="text-gray-300 text-xl" />
+                </div>
+              </div>
+            )}
 
             {showModelDropdown && isOpen && (
               <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -290,10 +471,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
                       setShowModelDropdown(false);
                     }}
                     className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
-                      selectedModel === model.id ? 'bg-blue-600 hover:bg-blue-700' : ''
+                      selectedModel === model.id
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : ""
                     }`}
                   >
-                    {model.name}
+                    <div className="truncate" title={model.name}>
+                      {model.name}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -305,10 +490,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
         {isOpen && (
           <div className="p-3 bg-gray-800 rounded-lg border border-gray-700">
             <p className="text-sm text-gray-300 text-center">
-              {isApiVerified 
-                ? 'Ready to generate! Select your task and model.' 
-                : 'Please verify your API key to enable model selection.'
-              }
+              {isApiVerified
+                ? `Ready! ${getCurrentModels().length} models available for ${selectedTask}`
+                : "Please verify your API key to enable model selection."}
             </p>
           </div>
         )}
@@ -319,7 +503,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
         {isOpen ? (
           <div className="text-center">
             <p className="text-xs text-gray-400">
-              {isApiVerified ? '✅ API Verified' : '🔒 API Required'}
+              {isApiVerified ? 
+                `✅ API Verified` : 
+                "🔒 API Required"}
             </p>
           </div>
         ) : (
