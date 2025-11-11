@@ -16,6 +16,9 @@ interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
+  onVerify: () => void;
+  onSelectModel: (modelId: string | null) => void;
+  onSelectPipeline: (pipelineTag: string | null) => void;
 }
 
 interface Model {
@@ -28,7 +31,7 @@ interface PipelineModels {
   [pipelineTag: string]: Model[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, onSelectModel, onSelectPipeline}) => {
   const [apiKey, setApiKey] = useState("");
   const [isApiVerified, setIsApiVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -124,11 +127,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
 
       const userInfo = await response.json();
       console.log("API Key verified for user:", userInfo);
+      onVerify();
       return true;
     } catch (error) {
       console.error("API verification failed:", error);
       return false;
     }
+  };
+
+  useEffect(() => {
+    if (selectedModel) {
+      onSelectModel(selectedModel);
+    }
+  }, [selectedModel, onSelectModel]);
+
+  // Notify parent when pipeline/task changes
+  useEffect(() => {
+    if (selectedTask) {
+      onSelectPipeline(selectedTask);
+    }
+  }, [selectedTask, onSelectPipeline]);
+
+  const handleTaskSelect = (taskId: string) => {
+    setSelectedTask(taskId);
+    if (availableModels[taskId] && availableModels[taskId].length > 0) {
+      const newModel = availableModels[taskId][0].id;
+      setSelectedModel(newModel);
+    }
+    setShowTaskDropdown(false);
+  };
+
+  // Update the model selection handler
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModel(modelId);
+    setShowModelDropdown(false);
   };
 
   // Alternative: Verify by testing with a simple model list request
@@ -392,13 +424,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
                   .map((task) => (
                   <button
                     key={task.id}
-                    onClick={() => {
-                      setSelectedTask(task.id);
-                      if (availableModels[task.id] && availableModels[task.id].length > 0) {
-                        setSelectedModel(availableModels[task.id][0].id);
-                      }
-                      setShowTaskDropdown(false);
-                    }}
+                    onClick={() => handleTaskSelect(task.id)}
                     className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
                       selectedTask === task.id
                         ? "bg-blue-600 hover:bg-blue-700"
@@ -466,10 +492,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose }) => {
                 {getCurrentModels().map((model) => (
                   <button
                     key={model.id}
-                    onClick={() => {
-                      setSelectedModel(model.id);
-                      setShowModelDropdown(false);
-                    }}
+                    onClick={() => handleModelSelect(model.id)}
                     className={`w-full text-left px-3 py-2 text-sm text-white hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg ${
                       selectedModel === model.id
                         ? "bg-blue-600 hover:bg-blue-700"

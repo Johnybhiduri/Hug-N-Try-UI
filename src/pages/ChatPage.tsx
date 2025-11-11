@@ -7,7 +7,13 @@ interface Message {
   timestamp: Date;
 }
 
-const ChatPage: React.FC = () => {
+interface ChatPageProps {
+  isVerified: boolean;
+  selectedModel: string | null;
+  selectedPipeline: string | null;
+}
+
+const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedPipeline}) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -85,12 +91,21 @@ const ChatPage: React.FC = () => {
             placeholder="Ask HUG-N-TRY anything..."
             className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
           />
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors border border-blue-500"
-          >
-            Send
-          </button>
+          <div className="relative inline-block">
+  <button
+    disabled={!isVerified}
+    type="submit"
+    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors border border-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:border-gray-500 disabled:cursor-not-allowed"
+  >
+    Send
+  </button>
+  {!isVerified && (
+    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-sm rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+      Please verify HuggingFace API key!
+      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+    </div>
+  )}
+</div>
         </form>
       </div>
     </div>
