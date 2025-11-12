@@ -1,4 +1,4 @@
-HUG-N-Try
+#  HUG-N-Try
 
 This project gives you an easy interface to explore and use Hugging Face models for tasks like text generation, summarization, text classification, text-to-image, text-to-video, audio processing, and more — all in one place.
 
