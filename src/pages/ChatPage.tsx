@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { InferenceClient } from "@huggingface/inference";
 
 interface Message {
   id: number;
@@ -9,11 +10,12 @@ interface Message {
 
 interface ChatPageProps {
   isVerified: boolean;
+  api_key: string;
   selectedModel: string | null;
   selectedPipeline: string | null;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedPipeline}) => {
+const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selectedPipeline, api_key }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -23,10 +25,30 @@ const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedP
     },
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputMessage.trim() === '') return;
+    if (inputMessage.trim() === '' || !isVerified || !selectedModel || !selectedPipeline) return;
+
+    // Check if only text-generation models are supported
+    if (selectedPipeline !== 'text-generation') {
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: "Currently only text generation models are working. We will add support for other pipelines in upcoming versions.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setInputMessage('');
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -36,16 +58,76 @@ const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedP
       timestamp: new Date(),
     };
 
-    // Add bot response
-    const botMessage: Message = {
-      id: messages.length + 2,
-      text: "Thanks for your message! I'm your HUG-N-TRY AI assistant. How can I help you further?",
-      isUser: false,
-      timestamp: new Date(),
-    };
-
-    setMessages([...messages, userMessage, botMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      // Initialize the bot message with empty text
+      const botMessageId = messages.length + 2;
+      const botMessage: Message = {
+        id: botMessageId,
+        text: '',
+        isUser: false,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+
+      // Create InferenceClient with user's API key
+      const client = new InferenceClient(api_key);
+
+      const stream = client.chatCompletionStream({
+        model: selectedModel,
+        messages: [
+          ...messages.map(msg => ({
+            role: msg.isUser ? 'user' as const : 'assistant' as const,
+            content: msg.text,
+          })),
+          {
+            role: 'user',
+            content: inputMessage,
+          },
+        ],
+      });
+
+      let fullResponse = '';
+
+      for await (const chunk of stream) {
+        if (chunk.choices && chunk.choices.length > 0) {
+          const newContent = chunk.choices[0].delta.content || '';
+          fullResponse += newContent;
+          
+          // Update the bot message with streaming content
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === botMessageId 
+                ? { ...msg, text: fullResponse }
+                : msg
+            )
+          );
+        }
+      }
+
+    } catch (error) {
+      console.error('Error streaming response:', error);
+      
+      // Update the bot message with error
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: "Sorry, I encountered an error while processing your request. Please try again.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => {
+        // Remove the loading message and add error message
+        const filtered = prev.filter(msg => msg.id !== messages.length + 2);
+        return [...filtered, errorMessage];
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -68,7 +150,7 @@ const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedP
                   : 'bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700'
               }`}
             >
-              <p className="text-sm">{message.text}</p>
+              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
               <p
                 className={`text-xs mt-1 ${
                   message.isUser ? 'text-blue-200' : 'text-gray-500'
@@ -79,6 +161,18 @@ const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedP
             </div>
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700">
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
@@ -90,23 +184,29 @@ const ChatPage: React.FC<ChatPageProps> = ({isVerified, selectedModel, selectedP
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Ask HUG-N-TRY anything..."
             className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
+            disabled={isLoading || !isVerified || !selectedModel}
           />
-          <div className="relative inline-block">
-  <button
-    disabled={!isVerified}
-    type="submit"
-    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors border border-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:border-gray-500 disabled:cursor-not-allowed"
-  >
-    Send
-  </button>
-  {!isVerified && (
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-sm rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
-      Please verify HuggingFace API key!
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-    </div>
-  )}
-</div>
+          <div className="relative inline-block group">
+            <button
+              disabled={!isVerified || isLoading || !selectedModel || inputMessage.trim() === ''}
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors border border-blue-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:border-gray-500 disabled:cursor-not-allowed"
+            >
+              {isLoading ? '...' : 'Send'}
+            </button>
+            {!isVerified && (
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-sm rounded whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200">
+                Please verify HuggingFace API key!
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+              </div>
+            )}
+          </div>
         </form>
+        {selectedPipeline && selectedPipeline !== 'text-generation' && (
+          <p className="text-yellow-500 text-xs mt-2 text-center">
+            Note: Currently only text generation models are fully supported
+          </p>
+        )}
       </div>
     </div>
   );

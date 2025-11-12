@@ -7,12 +7,12 @@ const App: React.FC = () => {
   const [isVerified, setIsVerified] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [selectedPipeline, setSelectedPipeline] = useState<string | null>(null);
-
+  const [apiKey, setApiKey] = useState<string>('');
   // Debug when selections change
-  useEffect(() => {
-    console.log("Selected Model:", selectedModel);
-    console.log("Selected Pipeline:", selectedPipeline);
-  }, [selectedModel, selectedPipeline]);
+  // useEffect(() => {
+  //   console.log("Selected Model:", selectedModel);
+  //   console.log("Selected Pipeline:", selectedPipeline);
+  // }, [selectedModel, selectedPipeline]);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -28,6 +28,7 @@ const App: React.FC = () => {
           onSelectModel={setSelectedModel}
           onSelectPipeline={setSelectedPipeline}
           onVerify={() => setIsVerified(true)}
+          onSetApiKey={setApiKey}
           onClose={() => setIsSidebarOpen(false)} 
         />
       </div>
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             isVerified={isVerified}
             selectedModel={selectedModel}
             selectedPipeline={selectedPipeline}
+            api_key={apiKey}
           />
         </main>
       </div>

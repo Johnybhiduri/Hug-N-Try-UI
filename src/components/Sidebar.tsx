@@ -19,6 +19,7 @@ interface SidebarProps {
   onVerify: () => void;
   onSelectModel: (modelId: string | null) => void;
   onSelectPipeline: (pipelineTag: string | null) => void;
+  onSetApiKey: (apiKey: string) => void;
 }
 
 interface Model {
@@ -31,7 +32,7 @@ interface PipelineModels {
   [pipelineTag: string]: Model[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, onSelectModel, onSelectPipeline}) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, onSelectModel, onSelectPipeline, onSetApiKey}) => {
   const [apiKey, setApiKey] = useState("");
   const [isApiVerified, setIsApiVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -128,6 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, 
       const userInfo = await response.json();
       console.log("API Key verified for user:", userInfo);
       onVerify();
+      onSetApiKey(token);
       return true;
     } catch (error) {
       console.error("API verification failed:", error);
