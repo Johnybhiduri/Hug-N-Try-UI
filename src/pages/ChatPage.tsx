@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { InferenceClient } from "@huggingface/inference";
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: number;
@@ -134,23 +135,65 @@ const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selected
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Custom components for ReactMarkdown to style the markdown
+  const markdownComponents = {
+    h1: ({ node, ...props }: { node?: any; [key: string]: any }) => <h1 className="text-xl font-bold text-white mt-4 mb-2" {...props} />,
+    h2: ({ node, ...props }: { node?: any; [key: string]: any }) => <h2 className="text-lg font-bold text-white mt-3 mb-2" {...props} />,
+    h3: ({ node, ...props }: { node?: any; [key: string]: any }) => <h3 className="text-md font-bold text-white mt-2 mb-1" {...props} />,
+    p: ({ node, ...props }: { node?: any; [key: string]: any }) => <p className="text-sm mb-2 leading-relaxed" {...props} />,
+    ul: ({ node, ...props }: { node?: any; [key: string]: any }) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+    ol: ({ node, ...props }: { node?: any; [key: string]: any }) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+    li: ({ node, ...props }: { node?: any; [key: string]: any }) => <li className="text-sm" {...props} />,
+    strong: ({ node, ...props }: { node?: any; [key: string]: any }) => <strong className="font-bold text-white" {...props} />,
+    em: ({ node, ...props }: { node?: any; [key: string]: any }) => <em className="italic" {...props} />,
+    table: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+      <div className="overflow-x-auto my-2">
+        <table className="min-w-full border border-gray-600" {...props} />
+      </div>
+    ),
+    thead: ({ node, ...props }: { node?: any; [key: string]: any }) => <thead className="bg-gray-700" {...props} />,
+    tbody: ({ node, ...props }: { node?: any; [key: string]: any }) => <tbody {...props} />,
+    tr: ({ node, ...props }: { node?: any; [key: string]: any }) => <tr className="border-b border-gray-600" {...props} />,
+    th: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+      <th className="px-3 py-2 text-left text-xs font-bold text-white border-r border-gray-600 last:border-r-0" {...props} />
+    ),
+    td: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+      <td className="px-3 py-2 text-xs border-r border-gray-600 last:border-r-0" {...props} />
+    ),
+    code: ({ node, inline, ...props }: { node?: any; inline?: boolean; [key: string]: any }) => 
+      inline ? 
+        <code className="bg-gray-700 px-1 py-0.5 rounded text-xs" {...props} /> :
+        <code className="block bg-gray-700 p-2 rounded text-xs my-2 overflow-x-auto" {...props} />,
+    blockquote: ({ node, ...props }: { node?: any; [key: string]: any }) => (
+      <blockquote className="border-l-4 border-blue-500 pl-3 my-2 text-gray-300 italic" {...props} />
+    ),
+  };
+
   return (
-    <div className="flex flex-col h-full bg-gray-900">
-      {/* Messages Container */}
+    <div className="flex flex-col h-screen bg-gray-900">
+      {/* Messages Container - Now uses full height */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} w-full`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              className={`max-w-full px-4 py-2 rounded-lg ${
                 message.isUser
-                  ? 'bg-blue-600 text-white rounded-br-none border border-blue-500'
-                  : 'bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700'
+                  ? 'bg-blue-600 text-white rounded-br-none border border-blue-500 max-w-2xl'
+                  : 'bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700 w-full'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+              {message.isUser ? (
+                <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+              ) : (
+                <div className="text-sm prose prose-invert max-w-none">
+                  <ReactMarkdown components={markdownComponents}>
+                    {message.text}
+                  </ReactMarkdown>
+                </div>
+              )}
               <p
                 className={`text-xs mt-1 ${
                   message.isUser ? 'text-blue-200' : 'text-gray-500'
@@ -162,8 +205,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selected
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-xs lg:max-w-md px-4 py-2 rounded-lg bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700">
+          <div className="flex justify-start w-full">
+            <div className="max-w-full px-4 py-2 rounded-lg bg-gray-800 text-gray-100 rounded-bl-none border border-gray-700">
               <div className="flex space-x-2">
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
                 <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
@@ -177,7 +220,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selected
 
       {/* Input Area */}
       <div className="bg-gray-800 border-t border-gray-700 p-4">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
+        <form onSubmit={handleSendMessage} className="flex space-x-2 max-w-7xl mx-auto">
           <input
             type="text"
             value={inputMessage}
