@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatPage from './pages/ChatPage';
 
@@ -21,7 +21,7 @@ const App: React.FC = () => {
   return (
     <div className="h-screen flex bg-gray-900 text-white">
       {/* Sidebar */}
-      <div className={`${isSidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 flex-shrink-0`}>
+      <div className={`${isSidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 shrink-0`}>
         <Sidebar 
           isOpen={isSidebarOpen} 
           onToggle={toggleSidebar}

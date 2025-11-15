@@ -10,7 +10,7 @@ import {
 import { RiRobot2Line } from "react-icons/ri";
 import { MdInput } from "react-icons/md";
 import { FaRegSquareCheck } from "react-icons/fa6";
-import { HfInference } from "@huggingface/inference";
+// import { HfInference } from "@huggingface/inference";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -32,7 +32,7 @@ interface PipelineModels {
   [pipelineTag: string]: Model[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, onSelectModel, onSelectPipeline, onSetApiKey}) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onVerify, onSelectModel, onSelectPipeline, onSetApiKey}) => {
   const [apiKey, setApiKey] = useState("");
   const [isApiVerified, setIsApiVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -166,25 +166,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, 
   };
 
   // Alternative: Verify by testing with a simple model list request
-  const verifyApiKeyWithModelTest = async (token: string) => {
-    try {
-      const response = await fetch("https://huggingface.co/api/models?limit=1", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  // const verifyApiKeyWithModelTest = async (token: string) => {
+  //   try {
+  //     const response = await fetch("https://huggingface.co/api/models?limit=1", {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //       },
+  //     });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
 
-      await response.json();
-      return true;
-    } catch (error) {
-      console.error("API verification failed:", error);
-      return false;
-    }
-  };
+  //     await response.json();
+  //     return true;
+  //   } catch (error) {
+  //     console.error("API verification failed:", error);
+  //     return false;
+  //   }
+  // };
 
   const verifyApiKey = async () => {
     if (!apiKey.trim()) return;
