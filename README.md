@@ -1,4 +1,4 @@
-#  HUG-N-Try
+#  FIRST SEARCH AI
 
 This project gives you an easy interface to explore and use Hugging Face models for tasks like text generation, summarization, text classification, text-to-image, text-to-video, audio processing, and more — all in one place.
 
@@ -24,10 +24,10 @@ Simple and clean React UI — no complex setup required
 You can run the project locally with just a few commands:
 
 # Clone the repo
-git clone https://github.com/Johnybhiduri/Hug-N-Try-UI.git
+git clone https://github.com/Johnybhiduri/First-Search-AI.git
 
 # Move into the project folder
-cd hug-n-try
+cd first-search-ai
 
 # Install dependencies
 npm install
