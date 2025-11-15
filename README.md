@@ -7,7 +7,7 @@ No need to dig through APIs — just pick a model and start experimenting!
 
 🌐 Live Demo
 
-Try it out here:
+Try it out here: https://first-search-ai.vercel.app/
 
 🚀 Features
 
