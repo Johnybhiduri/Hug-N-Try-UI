@@ -39,7 +39,7 @@ const App: React.FC = () => {
         <header className="bg-gray-800 border-b border-gray-700 p-4 lg:hidden">
           <div className="flex items-center">
             <div>
-              <h1 className="text-xl font-semibold text-white">HUG-N-TRY</h1>
+              <h1 className="text-xl font-semibold text-white">First Search AI</h1>
               <p className="text-sm text-gray-400">
                 {selectedModel ? `Model: ${selectedModel}` : 'No model selected'}
               </p>

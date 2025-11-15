@@ -260,7 +260,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, onClose, onVerify, 
                   <RiRobot2Line className="text-white text-lg" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-white">HUG-N-TRY</h1>
+                  <h1 className="text-lg font-bold text-white">First Search AI</h1>
                   <p className="text-xs text-gray-400">AI Assistant</p>
                 </div>
               </div>

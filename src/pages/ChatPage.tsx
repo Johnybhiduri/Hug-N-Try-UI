@@ -19,7 +19,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selected
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! Welcome to HUG-N-TRY AI Assistant. How can I assist you today?",
+      text: "Hello! Welcome to First Search AI Assistant. How can I assist you today?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -182,7 +182,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ isVerified, selectedModel, selected
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Ask HUG-N-TRY anything..."
+            placeholder="Ask First Search AI anything..."
             className="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400"
             disabled={isLoading || !isVerified || !selectedModel}
           />
